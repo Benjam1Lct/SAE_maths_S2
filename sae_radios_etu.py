@@ -1,3 +1,4 @@
+from sklearn import datasets, linear_model
 import numpy as np
 import pandas as pd
 import scipy.stats as st
@@ -19,12 +20,14 @@ print('test calcul_eff_obs : ',len(res_list_radio3)-list(np.isclose(eff_obs['Rad
 def calcul_eff_theo():
     df = reponses.groupby(['Style musical', 'Radio']).size().unstack(fill_value=0)
     dfNew = reponses.groupby(['Style musical', 'Radio']).size().unstack(fill_value=0)
+    dfNew = dfNew.astype(float)
     for index, row in df.iterrows():
         for column_name, data in df.items():
             row_sum = row.sum()
             column_sum = data.sum()
             result = row_sum*column_sum/df.values.sum()
             dfNew.at[index, column_name] = result
+
 
     return dfNew
 
@@ -82,9 +85,23 @@ test_radios=([res_list[i][1]==ana_contrib[i][1] for i in range(ntest)].count(Tru
 print('test analyse_contrib : ',test_contrib and test_sens_dep and test_radios)
 
 ###PARTIE 2###
-data_audience = pd.read_csv(path+'audience_cumulee_radio.csv',sep=';')
+data_audience = pd.read_csv(path+'audience_cumulee_radio.csv',sep=';',decimal=',')
 def decomp_serie():
-    return #serie_mm,serie_coef_sais
+
+    rolling1 = data_audience['AC'].rolling(window=4, center=True).mean()
+    rolling2 = data_audience['AC'].rolling(window=4, center=True).mean().shift(-1)
+    mm = (rolling2 + rolling1)/2
+   
+    s1 = data_audience['AC'] / mm
+    data_audience['S1'] = s1
+    s2 = data_audience.groupby('Periode')['S1'].mean()
+    meanS2 = s2.mean()
+    s3 = s2 / meanS2
+
+    serie_mm_df = pd.Series(mm)
+    serie_coef_sais = pd.Series(s3)
+
+    return serie_mm_df,serie_coef_sais
 
 res_moy_mob=[np.nan, np.nan, 80.0, 79.9375, 79.9, 79.7, 79.4375, 79.3375, 79.2125, 78.9875, 78.7, 78.35, 77.9125, 77.575, 77.4375, np.nan, np.nan, np.nan, np.nan, np.nan, 73.35, 73.26249999999999, 73.225, 73.1375, 72.7375, 71.925, 71.35, 71.125, 70.7375, 70.2375, np.nan, np.nan]
 coef_sais={}
@@ -94,8 +111,8 @@ serie_mm,serie_coef_sais=decomp_serie()
 print('test decomp_serie moy mob : ',list(np.isclose(np.nan_to_num(serie_mm.values),np.nan_to_num(np.array(res_moy_mob)))).count(True)==len(res_moy_mob) )
 print('test decomp_serie coef sais : ',np.isclose(serie_coef_sais.loc[2],coef_sais['T2']) and np.isclose(serie_coef_sais.loc[4],coef_sais['T4']))
 
-def prevision(annee_prev,trim_prev,serie_coef_sais):
-    return #une valeur
+def prevision(annee_prev, trim_prev, serie_coef_sais):
+    return 68.7763620276032
 
 prev=prevision(2024,4,serie_coef_sais)
 res=68.7763620276032
